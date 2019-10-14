@@ -42,37 +42,38 @@
 button {
   font-size: 1.5rem;
   width: 7rem;
+  height: 3rem;
   margin: 0 1rem;
   padding: 5px;
   border: 0 solid black;
-  border-radius: 12px;
+  border-radius: 5px;
   color: #dfdfdf;
   transition-duration: 250ms;
   outline: none;
 }
 
 .red {
-  background-color: #c62828;
+  background-color: #ffffff0f;
 }
 
 .red:hover {
-  background-color: #8e0000;
+  background-color: #ff000040;
 }
 
 .red:active {
-  background-color: #8e000080;
+  background-color: #ff000020;
 }
 
-.green {
-  background-color: #2e7d32;
+.whiter {
+  background-color: #ffffff30;
 }
 
 .green:hover {
-  background-color: #005005;
+  background-color: #00ff0030;
 }
 
 .green:active {
-  background-color: #00500580;
+  background-color: #00ff0010;
 }
 
 

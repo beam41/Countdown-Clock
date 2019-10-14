@@ -10,7 +10,7 @@ class App extends React.Component {
       valuemilli: 0,
       valuemin: 0,
       valuesec: 0,
-      width: 0
+      width: window.innerWidth
     };
 
     this.socket = io("http://localhost:4000/");
@@ -150,20 +150,21 @@ class App extends React.Component {
     const resumeButton = () => {
       if (this.state.valuemilli > 0)
         return (
-          <button type="button" onClick={this.sentResumeData} className="green">
+          <button
+            type="button"
+            onClick={this.sentResumeData}
+            className="green whiter"
+          >
             resume
           </button>
         );
     };
 
     const size = () => {
-      if (this.state.width > 878)
-        return { "font-size": "20rem"}
-      else if (this.state.width < 460)
-        return { "font-size": "5rem"}
-      else
-        return { "font-size": "10rem"}
-    }
+      if (this.state.width > 878) return { fontSize: "20rem" };
+      else if (this.state.width < 460) return { fontSize: "5rem" };
+      else return { fontSize: "10rem" };
+    };
 
     const clock = () => {
       if (response === null) {
@@ -188,7 +189,7 @@ class App extends React.Component {
               <button
                 type="button"
                 onClick={this.sentStartData}
-                className="green"
+                className="green whiter"
               >
                 start
               </button>
@@ -214,7 +215,11 @@ class App extends React.Component {
               />
             </div>
             <div className="box">
-              <button type="button" onClick={this.sentStopData} className="red">
+              <button
+                type="button"
+                onClick={this.sentStopData}
+                className="red whiter"
+              >
                 stop
               </button>
             </div>

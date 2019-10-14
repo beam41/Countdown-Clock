@@ -76,9 +76,6 @@ typings/
 # nuxt.js build output
 .nuxt
 
-# react / gatsby 
-public/
-
 # vuepress build output
 .vuepress/dist
 
@@ -100,7 +97,7 @@ public/
 /coverage
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
