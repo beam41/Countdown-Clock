@@ -7,75 +7,135 @@ class App extends React.Component {
     super(props);
     this.state = {
       response: null,
-      value: 10000,
-      socket: io("http://localhost:4000/")
+      valuemilli: 0,
+      valuemin: 0,
+      valuesec: 0,
+      width: 0
     };
 
-    this.handleChange = this.handleChange.bind(this);
+    this.socket = io("http://localhost:4000/");
+
+    this.handleChangeMin = this.handleChangeMin.bind(this);
+    this.handleChangeSec = this.handleChangeSec.bind(this);
     this.sentStartData = this.sentStartData.bind(this);
+    this.sentResumeData = this.sentResumeData.bind(this);
     this.sentStopData = this.sentStopData.bind(this);
     this.sentResetData = this.sentResetData.bind(this);
+    this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
   }
 
   componentDidMount() {
-    this.state.socket.on("res", data => {
-      if (data.hasOwnProperty("reset")) {
-        if (data.reset) {
-          this.setState({ response: null, value: 10000 });
+    this.socket.on("res", data => {
+      if (data !== null) {
+        if (data.hasOwnProperty("reset")) {
+          if (data.reset) {
+            this.setState({ response: null, valuemilli: 0 });
+            this.setMinSec();
+          }
+        } else {
+          this.setState({ response: data });
+          this.dataManip();
         }
-      } else {
-        this.setState({ response: data });
-        this.dataManip();
       }
     });
+    this.socket.emit("new");
 
     this.interval = setInterval(() => this.dataManip(), 10);
+    window.addEventListener("resize", this.updateWindowDimensions);
   }
 
   componentWillUnmount() {
     clearInterval(this.interval);
+    window.removeEventListener("resize", this.updateWindowDimensions);
+  }
+
+  updateWindowDimensions() {
+    this.setState({ width: window.innerWidth });
   }
 
   dataManip() {
     const { response } = this.state;
     if (response !== null) {
       if (response.stopped)
-        this.setState({
-          value: this.calcTimeLeft(
-            response.startAt,
-            response.cdLength,
-            response.stopAt
-          )
-        });
+        this.setState(
+          {
+            valuemilli: this.calcTimeLeft(
+              response.startAt,
+              response.cdLength,
+              response.stopAt
+            )
+          },
+          this.setMinSec()
+        );
       else
-        this.setState({
-          value: this.calcTimeLeft(response.startAt, response.cdLength)
-        });
+        this.setState(
+          {
+            valuemilli: this.calcTimeLeft(response.startAt, response.cdLength)
+          },
+          this.setMinSec()
+        );
     }
   }
 
-  handleChange(event) {
-    this.setState({ value: event.target.value });
+  setMinSec() {
+    const { valuemilli } = this.state;
+    const min = Math.floor(valuemilli / 60000);
+    const sec = Math.ceil(valuemilli / 1000) % 60;
+    this.setState({
+      valuemin: sec < 1 && valuemilli > 1 ? min + 1 : min,
+      valuesec: sec
+    });
+  }
+
+  handleChangeMin(event) {
+    if (!isNaN(event.target.value))
+      this.setState({
+        valuemin: Math.max(0, Math.min(+event.target.value, 99))
+      });
+  }
+
+  handleChangeSec(event) {
+    if (!isNaN(event.target.value))
+      this.setState({
+        valuesec: Math.max(0, Math.min(+event.target.value, 59))
+      });
   }
 
   sentStartData(event) {
-    const { value } = this.state;
-    this.state.socket.emit("start", {
+    this.setState(
+      {
+        valuemilli: (this.state.valuemin * 60 + this.state.valuesec) * 1000
+      },
+      () => {
+        const { valuemilli } = this.state;
+        if (valuemilli > 0)
+          this.socket.emit("start", {
+            startAt: Date.now(),
+            cdLength: valuemilli
+          });
+      }
+    );
+    event.preventDefault();
+  }
+
+  sentResumeData(event) {
+    const { valuemilli } = this.state;
+    this.socket.emit("start", {
       startAt: Date.now(),
-      cdLength: value
+      cdLength: valuemilli
     });
     event.preventDefault();
   }
 
   sentStopData(event) {
-    this.state.socket.emit("stop", {
+    this.socket.emit("stop", {
       stopAt: Date.now()
     });
     event.preventDefault();
   }
 
   sentResetData(event) {
-    this.state.socket.emit("reset");
+    this.socket.emit("reset");
     event.preventDefault();
   }
 
@@ -87,42 +147,113 @@ class App extends React.Component {
   render() {
     const { response } = this.state;
 
+    const resumeButton = () => {
+      if (this.state.valuemilli > 0)
+        return (
+          <button type="button" onClick={this.sentResumeData} className="green">
+            resume
+          </button>
+        );
+    };
+
+    const size = () => {
+      if (this.state.width > 878)
+        return { "font-size": "20rem"}
+      else if (this.state.width < 460)
+        return { "font-size": "5rem"}
+      else
+        return { "font-size": "10rem"}
+    }
+
     const clock = () => {
       if (response === null) {
         return (
           <>
-            <input
-              type="text"
-              value={this.state.value}
-              onChange={this.handleChange}
-            />
-            <button type="button" onClick={this.sentStartData}>
-              start
-            </button>
+            <div className="box start" style={size()}>
+              <input
+                type="text"
+                value={this.state.valuemin.toString().padStart(2, "0")}
+                onChange={this.handleChangeMin}
+                style={size()}
+              />
+              :
+              <input
+                type="text"
+                value={this.state.valuesec.toString().padStart(2, "0")}
+                onChange={this.handleChangeSec}
+                style={size()}
+              />
+            </div>
+            <div className="box">
+              <button
+                type="button"
+                onClick={this.sentStartData}
+                className="green"
+              >
+                start
+              </button>
+            </div>
           </>
         );
       } else if (!response.stopped) {
         return (
           <>
-            <input type="text" value={this.state.value} readOnly />
-            <button type="button" onClick={this.sentStopData}>
-              stop
-            </button>
+            <div className="box readonly" style={size()}>
+              <input
+                type="text"
+                value={this.state.valuemin.toString().padStart(2, "0")}
+                readOnly
+                style={size()}
+              />
+              :
+              <input
+                type="text"
+                value={this.state.valuesec.toString().padStart(2, "0")}
+                readOnly
+                style={size()}
+              />
+            </div>
+            <div className="box">
+              <button type="button" onClick={this.sentStopData} className="red">
+                stop
+              </button>
+            </div>
           </>
         );
       } else if (response.stopped) {
         return (
           <>
-            <input type="text" value={this.state.value} readOnly />
-            <button type="button" onClick={this.sentResetData}>
-              reset
-            </button>
+            <div className="box readonly" style={size()}>
+              <input
+                type="text"
+                value={this.state.valuemin.toString().padStart(2, "0")}
+                readOnly
+                style={size()}
+              />
+              :
+              <input
+                type="text"
+                value={this.state.valuesec.toString().padStart(2, "0")}
+                readOnly
+                style={size()}
+              />
+            </div>
+            <div className="box">
+              {resumeButton()}
+              <button
+                type="button"
+                onClick={this.sentResetData}
+                className="red"
+              >
+                reset
+              </button>
+            </div>
           </>
         );
       }
     };
 
-    return <div className="box">{clock()}</div>;
+    return <div className="container">{clock()}</div>;
   }
 }
 
